@@ -5,7 +5,7 @@ import sys
 
 # pygame.init()
 
-WIDTH, HEIGHT = 633, 900
+WIDTH, HEIGHT = 633, 800
 
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 BACKGROUND = pygame.image.load("Tiles.png")
@@ -42,14 +42,34 @@ words = []
 bg_colors = []
 current_letter_bg_x = 110
 guesses = 0
+indicator_x, indicator_y = 20, 590
+green,yellow,grey = [],[],[]
 
 
 def reset():
+    global guesses,CORRECT_WORD,current_word,game_won,words,bg_colors,current_letter_bg_x,indicator_x,indicator_y,green,grey,yellow
+    SCREEN.fill("white")
+    SCREEN.blit(BACKGROUND, BACKGROUND_RECT)
+    guesses = 0
+    CORRECT_WORD = random.choice(WORDS)
+    current_word = ''
+    game_won = ''
+    words = []
+    bg_colors = []
+    current_letter_bg_x = 110
+    indicator_x, indicator_y = 20, 590
+    green,yellow,grey = [],[],[]
+    indicators()
     print('reset')
 
 def check_words():
-    global current_word,guesses,CORRECT_WORD,current_letter_bg_x
+    global current_word,guesses,CORRECT_WORD,current_letter_bg_x,game_won,grey,green,yellow
     temp_list = []
+    if current_word.lower() == CORRECT_WORD:
+        game_won = "W"
+    if guesses == 6 and game_won == "":
+        game_won = "L"
+    
     words.append(current_word)
     for i in range(len(current_word)):
         print(guesses,current_word[i],CORRECT_WORD[i])
@@ -57,16 +77,21 @@ def check_words():
             print(CORRECT_WORD[i:])
             if current_word[i].lower() == CORRECT_WORD[i]:
                 print('green')
+                green.append(current_word[i].lower())
                 temp_list.append(GREEN)
             # elif current_word[i].lower() in CORRECT_WORD[i:]:
             else:
                 print('yellow')
+                yellow.append(current_word[i].lower())
+
                 temp_list.append(YELLOW)
             # else:
             #     print('grey')
             #     temp_list.append(GREY)
         else:
             print('grey')
+            grey.append(current_word[i].lower())
+
             temp_list.append(GREY)
     bg_colors.append(temp_list)
     for colors in bg_colors:
@@ -78,8 +103,44 @@ def check_words():
             current_letter_bg_x += LETTER_X_SPACING
     guesses+=1
     current_word = ''
-    print(words,bg_colors)
+    # print(words,bg_colors)
+    print(green,yellow,grey)
+    print(game_won)
 
+
+def indicators():
+    global grey,green,yellow,GREEN,YELLOW,GREY
+    # print('indicators')
+    indicator_x, indicator_y = 20, 590
+    if game_won=='W':
+        pygame.draw.rect(SCREEN, "white", (10, 590, 1000, 600))
+        play_again_font = pygame.font.Font("FreeSansBold.otf", 40)
+        play_again_text = play_again_font.render("Press ENTER to Play Again!", True, "black")
+        play_again_rect = play_again_text.get_rect(center=(WIDTH/2, 700))
+        word_was_text = play_again_font.render(f"The word was {CORRECT_WORD}!", True, "black")
+        word_was_rect = word_was_text.get_rect(center=(WIDTH/2, 650))
+        SCREEN.blit(word_was_text, word_was_rect)
+        SCREEN.blit(play_again_text, play_again_rect)
+    else:
+        for i in range(3):
+            for letter in ALPHABET[i]:
+                if letter.lower() in green:
+                    pygame.draw.rect(SCREEN, GREEN, (indicator_x, indicator_y, 57, 60))
+                elif letter.lower() in yellow:
+                    pygame.draw.rect(SCREEN, YELLOW, (indicator_x, indicator_y, 57, 60))
+                elif letter.lower() in grey:
+                    pygame.draw.rect(SCREEN, GREY, (indicator_x, indicator_y, 57, 60))
+                else:
+                    pygame.draw.rect(SCREEN, OUTLINE, (indicator_x, indicator_y, 57, 60))
+                text_surface = AVAILABLE_LETTER_FONT.render(letter, True, "white")
+                text_rect = text_surface.get_rect(center=(indicator_x+27, indicator_y+30))
+                SCREEN.blit(text_surface, text_rect)
+                indicator_x += 60
+            indicator_y += 65
+            if i == 0:
+                indicator_x = 50
+            elif i == 1:
+                indicator_x = 105
 
 def create_word(key):
     global current_word,LETTER_X_SPACING,current_letter_bg_x,LETTER_SIZE
@@ -100,26 +161,28 @@ def delete_letter():
     current_word = current_word[:-1]
     print(current_word)
 
+indicators()
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN:
+        if event.type == pygame.KEYDOWN and game_won=='':
             key_pressed = event.unicode.upper()
             if event.key == pygame.K_RETURN:
-                if game_won != '':
-                    reset()
-                else:
-                    if len(current_word) == 5 and current_word.lower() in WORDS:
-                        print('entered')
-                        check_words()
+                if len(current_word) == 5 and current_word.lower() in WORDS:
+                    print('entered')
+                    check_words()
+                    indicators()
             elif event.key == pygame.K_BACKSPACE:
                 if len(current_word) > 0:
                     delete_letter()
             if key_pressed in "QWERTYUIOPASDFGHJKLZXCVBNM" and key_pressed != "":
                 if len(current_word)<5:
                     create_word(key_pressed)
+        elif game_won!='' and event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                reset()
     pygame.display.update()
     # draw_words()
